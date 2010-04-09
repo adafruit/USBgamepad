@@ -1,4 +1,3 @@
-#define DEBOUNCE 10  // button debouncer, how many ms to debounce, 5+ ms is usually plenty
 #define REPEATRATE 100  // milliseconds
 
 const int pinBtnUp = 0;
@@ -36,7 +35,6 @@ void setup()
   //It enables a pullup resitor on the pin.
   for (byte i=0; i< NUMBUTTONS; i++) {
     pinMode(buttons[i], INPUT_PULLUP);
-
   }
   
   //Uncomment this line to debug the acceleromter values:

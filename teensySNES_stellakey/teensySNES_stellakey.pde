@@ -123,10 +123,10 @@ void loop()
 //  //debugging the start button...
   digitalWrite ( pinLEDOutput, digitalRead(pinBtnStart));
 
-  check_switches();
+
   //Process the accelerometer to make the cursor move.
   //Comment this line to debug the accelerometer values:
- // fcnProcessAccelerometer();
+  fcnProcessAccelerometer();
 
   //Progess the SNES controller buttons to send keystrokes.
    fcnProcessButtons();
