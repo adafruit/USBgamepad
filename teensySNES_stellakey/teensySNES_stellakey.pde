@@ -1,6 +1,5 @@
-#define DEBOUNCE 10  // button debouncer, how many ms to debounce, 5+ ms is usually plenty
-
-
+#define KEYREPEAT 85 // delay when repeating characters
+#define KEYDELAY 200 // delay from first to second character
 const int pinAnalogXInput = 3;
 const int pinAnalogYInput = 1;
 const int pinAnalogZInput = 2;
@@ -114,11 +113,8 @@ void setup()
     pinMode(buttons[i], INPUT_PULLUP);
 
   }
-
-
   //Uncomment this line to debug the acceleromter values:
-Serial.begin(19200);
-
+  //Serial.begin(19200);
 }
 
 
@@ -143,55 +139,6 @@ void loop()
   delay(cintMouseDelay);
 }
 
-void check_switches()
-{
-  static byte previousstate[NUMBUTTONS];
-  static byte currentstate[NUMBUTTONS];
-  static long lasttime;
-  byte index;
-
-  if (millis() < lasttime) {
-     // we wrapped around, lets just try again
-     lasttime = millis();
-  }
-
-  if ((lasttime + DEBOUNCE) > millis()) {
-    // not enough time has passed to debounce
-    return;
-  }
-  // ok we have waited DEBOUNCE milliseconds, lets reset the timer
-  lasttime = millis();
-
-  for (index = 0; index < NUMBUTTONS; index++) {
-    justpressed[index] = 0;       // when we start, we clear out the "just" indicators
-    justreleased[index] = 0;
-
-    currentstate[index] = digitalRead(buttons[index]);   // read the button
-
-     /*
-    Serial.print(index, DEC);
-    Serial.print(": cstate=");
-    Serial.print(currentstate[index], DEC);
-    Serial.print(", pstate=");
-    Serial.print(previousstate[index], DEC);
-    Serial.print(", press=");
-    */
-
-    if (currentstate[index] == previousstate[index]) {
-      if ((pressed[index] == LOW) && (currentstate[index] == LOW)) {
-          // just pressed
-          justpressed[index] = 1;
-      }
-      else if ((pressed[index] == HIGH) && (currentstate[index] == HIGH)) {
-          // just released
-          justreleased[index] = 1;
-      }
-      pressed[index] = !currentstate[index];  // remember, digital HIGH means NOT pressed
-    }
-   // Serial.println(pressed[index], DEC);
-    previousstate[index] = currentstate[index];   // keep a running tally of the buttons
-  }
-}
 
 
 //Function to process the acclerometer data
@@ -240,25 +187,19 @@ void fcnProcessAccelerometer()
     intMouseYMovement = 0;
   }
  
- // Mouse.move(intMouseXMovement, intMouseYMovement);
-
+  Mouse.move(intMouseXMovement, intMouseYMovement);
 }
 
 //Function to process the buttons from the SNES controller
 void fcnProcessButtons()
-{/*
-        Keyboard.set_key1(KEY_Z);
-      Keyboard.send_now();
-     Keyboard.set_key1(0);
-     Keyboard.send_now(); // send strokes
-  */
+{
   byte flag = 0;
   static long currentkey = 0;
   static long repeat = 0;
   
   for (byte i = 0; i < NUMBUTTONS; i++) {
-   // Serial.print(i, DEC); Serial.print(" -> "); Serial.println(pressed[i], HEX);
-    if (pressed[i] && !digitalRead(buttons[i])) {
+
+    if ( !digitalRead(buttons[i])) {
       flag = 1;
       if (currentkey != keys[i]) {
         // unset the old key
@@ -270,13 +211,13 @@ void fcnProcessButtons()
         repeat = 0;
       } else {
         if (! repeat) {
-          delay(200);
+          delay(KEYDELAY);
         } else {
          // resend 
          repeat = 1;
          Keyboard.set_key1(keys[i]);
          Keyboard.send_now();
-         delay(85);
+         delay(KEYREPEAT);
        }
       }
     }
