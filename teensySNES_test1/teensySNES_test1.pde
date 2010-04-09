@@ -1,3 +1,5 @@
+#define DEBOUNCE 10  // button debouncer, how many ms to debounce, 5+ ms is usually plenty
+#define REPEATRATE 100  // milliseconds
 
 const int pinBtnUp = 0;
 const int pinBtnRight = 1;
@@ -18,21 +20,14 @@ const int pinBtnTrigRight = 23;
 const int pinLEDOutput = 11;
 
 //Variables for the states of the SNES buttons
-boolean boolBtnA;
-boolean boolBtnB;
-boolean boolBtnX;
-boolean boolBtnY;
+byte buttons[] = {pinBtnUp, pinBtnRight, pinBtnDown, pinBtnLeft, pinBtnSelect, pinBtnStart,
+pinBtnB, pinBtnA, pinBtnY, pinBtnX, pinBtnTrigLeft, pinBtnTrigRight}; 
+byte keys[] = {KEY_U, KEY_R, KEY_D, KEY_L, KEY_ENTER, KEY_TAB, KEY_B, KEY_A, KEY_Y, KEY_X, KEY_P, KEY_Q};
 
-boolean boolBtnTrigLeft;
-boolean boolBtnTrigRight;
+#define NUMBUTTONS sizeof(buttons)
 
-boolean boolBtnUp;
-boolean boolBtnDown;
-boolean boolBtnLeft;
-boolean boolBtnRight;
-
-boolean boolBtnSelect;
-boolean boolBtnStart;
+// we will track if a button is just pressed, just released, or 'currently pressed' 
+volatile byte pressed[NUMBUTTONS], justpressed[NUMBUTTONS], justreleased[NUMBUTTONS];
 
 void setup()
 {
@@ -41,38 +36,16 @@ void setup()
 
   //Special for the Teensy is the INPUT_PULLUP
   //It enables a pullup resitor on the pin.
-  pinMode( pinBtnA, INPUT_PULLUP );
-  pinMode( pinBtnB, INPUT_PULLUP );
-  pinMode( pinBtnX, INPUT_PULLUP );
-  pinMode( pinBtnY, INPUT_PULLUP );
-  
-  pinMode( pinBtnUp, INPUT_PULLUP );
-  pinMode( pinBtnDown, INPUT_PULLUP );
-  pinMode( pinBtnLeft, INPUT_PULLUP );
-  pinMode( pinBtnRight, INPUT_PULLUP );
-  
-  pinMode( pinBtnTrigLeft, INPUT_PULLUP );
-  pinMode( pinBtnTrigRight, INPUT_PULLUP );
-  pinMode( pinBtnSelect, INPUT_PULLUP );
-  pinMode( pinBtnStart, INPUT_PULLUP );
+  for (byte i=0; i< NUMBUTTONS; i++) {
+    pinMode(buttons[i], INPUT_PULLUP);
+
+  }
 
   //Zero the SNES controller button keys:
-  boolBtnA = false;
-  boolBtnB = false;
-  boolBtnX = false;
-  boolBtnY = false;
+  for (byte i=0; i< NUMBUTTONS; i++) {
+      pressed[i] = justpressed[i] = justreleased[i] = 0;
+  }
   
-  boolBtnTrigLeft = false;
-  boolBtnTrigRight = false;
-  
-  boolBtnUp = false;
-  boolBtnDown = false;
-  boolBtnLeft = false;
-  boolBtnRight = false;
-  
-  boolBtnSelect = false;
-  boolBtnStart = false;
-
   //Uncomment this line to debug the acceleromter values:
 //  Serial.begin();
 
@@ -84,7 +57,7 @@ void loop()
 //  //debugging the start button...
   digitalWrite ( pinLEDOutput, digitalRead(pinBtnStart));
 
-
+  check_switches();
   //Progess the SNES controller buttons to send keystrokes.
   fcnProcessButtons();
   
@@ -93,119 +66,85 @@ void loop()
 //Function to process the buttons from the SNES controller
 void fcnProcessButtons()
 {
-  //Assign temporary values for the buttons.
-  //Remember, the SNES buttons are read as active LOW.
-  //Capture their status here:
-  boolean boolBtnA = !digitalRead(pinBtnA);
-  boolean boolBtnB = !digitalRead(pinBtnB);  
-  boolean boolBtnX = !digitalRead(pinBtnX);
-  boolean boolBtnY = !digitalRead(pinBtnY);
+  static long currentkey = 0;
+  byte nothingpressed = 1;
   
-  boolean boolBtnTrigLeft = !digitalRead(pinBtnTrigLeft);
-  boolean boolBtnTrigRight = !digitalRead(pinBtnTrigRight);
-  
-  boolean boolBtnUp = !digitalRead(pinBtnUp);
-  boolean boolBtnDown = !digitalRead(pinBtnDown);
-  boolean boolBtnLeft = !digitalRead(pinBtnLeft);
-  boolean boolBtnRight = !digitalRead(pinBtnRight);
-  
-  boolean boolBtnSelect = !digitalRead(pinBtnSelect);
-  boolean boolBtnStart = !digitalRead(pinBtnStart);
-
-  if ( boolBtnUp ) {
-    //Set key1 to the 'U' key
-    Keyboard.set_key1( KEY_U );
-  } else if ( boolBtnDown ) {
-    //Set key1 to the 'D' key
-    Keyboard.set_key1( KEY_D );
-  } else if ( boolBtnLeft ) {
-    //Set key1 to the 'L' key
-    Keyboard.set_key1( KEY_L );
-  } else if ( boolBtnRight ) {
-    //Set key1 to the 'R' key
-    Keyboard.set_key1( KEY_R );
-  }
-  
-  else //All else: nothing pressed, unset
-  {
-    //Set key1 to send nothing
-    Keyboard.set_key1( 0 );
-  }
-  
-  //If the X button was pressed...
-  if ( boolBtnX )
-  {
-    //Set key2 to the X key
-    Keyboard.set_key2( KEY_X );
-  } 
-  else if ( boolBtnY )
-  {
-    //Set key2 to the Y key
-    Keyboard.set_key2( KEY_Y );
-  } 
-  else if ( boolBtnA )
-  {
-    //Set key2 to the A key
-    Keyboard.set_key2( KEY_A );
-  } 
-  else if ( boolBtnB )
-  {
-    //Set key2 to the B key
-    Keyboard.set_key2( KEY_B );
-  } 
-    //All else: nothing pressed, unset
-  else
-  {
-    //Set key2 to send nothing
-    Keyboard.set_key2( 0 );
-  }
-  
-  
-  //If the Left trigger button was pressed...
-  if ( boolBtnTrigLeft )
-  {
-    //Set key3 to the Q key
-    Keyboard.set_key3( KEY_Q );
-  } else {
-    Keyboard.set_key3( 0 );
-  }
-
-  //If the Right trigger button was pressed...
-  if ( boolBtnTrigRight )
-  {
-    //Set key5 to the 'P' key
-    Keyboard.set_key4( KEY_P );
-  } else {
-    Keyboard.set_key4( 0 );
-  }
-
-
- if ( boolBtnStart )
-    {
-      //Set key5 to the Tab key
-      Keyboard.set_key5( KEY_TAB );
-    }  
-  else
-    {
-      //Set key5 to send nothing
-      Keyboard.set_key5( 0 );
+  for (byte i = 0; i < NUMBUTTONS; i++) {
+   // Serial.print(i, DEC); Serial.print(" -> "); Serial.println(pressed[i], HEX);
+    if (pressed[i]) {
+      nothingpressed = 0;
+      
+      if (currentkey != keys[i]) {
+        Keyboard.set_key1(0);
+        Keyboard.send_now();
+        Keyboard.set_key1(keys[i]);
+        currentkey = keys[i];
+        Keyboard.send_now();
+      } else {
+        // the same button is pressed, so repeat!
+        Keyboard.set_key1(keys[i]);
+        Keyboard.send_now();
+        delay(100);
+      }
     }
-    
-    
- if ( boolBtnSelect )
-    {
-      //Set key6 to the Enter key
-      Keyboard.set_key6( KEY_ENTER );
-    }
- else
-    {
-      //Set key6 to send nothing
-      Keyboard.set_key6( 0 );
-    }
-    
-  //Send all of the set keys.
-  Keyboard.send_now();
-
-
+  }
+  
+  if (nothingpressed) {
+    Keyboard.set_key1(0);
+    Keyboard.send_now();
+  }
 }
+
+
+
+void check_switches()
+{
+  static byte previousstate[NUMBUTTONS];
+  static byte currentstate[NUMBUTTONS];
+  static long lasttime;
+  byte index;
+
+  if (millis() < lasttime) {
+     // we wrapped around, lets just try again
+     lasttime = millis();
+  }
+
+  if ((lasttime + DEBOUNCE) > millis()) {
+    // not enough time has passed to debounce
+    return;
+  }
+  // ok we have waited DEBOUNCE milliseconds, lets reset the timer
+  lasttime = millis();
+
+  for (index = 0; index < NUMBUTTONS; index++) {
+    justpressed[index] = 0;       // when we start, we clear out the "just" indicators
+    justreleased[index] = 0;
+
+    currentstate[index] = digitalRead(buttons[index]);   // read the button
+
+     /*
+    Serial.print(index, DEC);
+    Serial.print(": cstate=");
+    Serial.print(currentstate[index], DEC);
+    Serial.print(", pstate=");
+    Serial.print(previousstate[index], DEC);
+    Serial.print(", press=");
+    */
+
+    if (currentstate[index] == previousstate[index]) {
+      if ((pressed[index] == LOW) && (currentstate[index] == LOW)) {
+          // just pressed
+          justpressed[index] = 1;
+      }
+      else if ((pressed[index] == HIGH) && (currentstate[index] == HIGH)) {
+          // just released
+          justreleased[index] = 1;
+      }
+      pressed[index] = !currentstate[index];  // remember, digital HIGH means NOT pressed
+    }
+   // Serial.println(pressed[index], DEC);
+    previousstate[index] = currentstate[index];   // keep a running tally of the buttons
+  }
+}
+
 
