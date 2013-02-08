@@ -1,0 +1,106 @@
+//Defined by the order you solder your wires.
+const int pinBtnUp = 3;
+const int pinBtnRight = 4;
+const int pinBtnDown = 1;
+const int pinBtnLeft = 0;
+
+const int pinBtnSelect = 5;
+const int pinBtnStart = 6;
+
+const int pinBtnB = 11;
+const int pinBtnA = 10;
+const int pinBtnY = 7;
+const int pinBtnX = 9;
+
+const int pinBtnTrigLeft = 2;
+const int pinBtnTrigRight = 8;
+
+byte buttons[] = {pinBtnUp, pinBtnRight, pinBtnDown, pinBtnLeft, pinBtnSelect, pinBtnStart,
+pinBtnB, pinBtnA, pinBtnY, pinBtnX, pinBtnTrigLeft, pinBtnTrigRight}; 
+
+int keys[] = {KEY_W, KEY_D, KEY_S, KEY_A, KEY_ENTER, KEY_TAB, KEY_M, KEY_K, KEY_J, KEY_I, KEY_L, KEY_R};
+
+#define NUMBUTTONS sizeof(buttons)
+
+// the setup routine runs once when you press reset:
+void setup() { 
+  // initialize the buttons as inputs.
+  for (byte i=0; i< NUMBUTTONS; i++) {
+    pinMode(buttons[i], INPUT_PULLUP);
+  }
+}
+
+void loop() {
+  //Progess the SNES controller buttons to send keystrokes.
+  fcnProcessButtons();
+}
+
+//This is to allow for multiple keys pressed at once.
+//Allows up to 6 keys simultaneously.
+void set_key( int key_count, byte key){
+  switch(key_count){
+    case(1):
+      Keyboard.set_key1(key);
+      break;    
+    case(2):
+      Keyboard.set_key2(key);
+      break;  
+    case(3):
+      Keyboard.set_key3(key);
+      break;  
+    case(4):
+      Keyboard.set_key4(key);
+      break;  
+    case(5):
+      Keyboard.set_key5(key);
+      break;  
+    case(6):
+      Keyboard.set_key6(key);
+      break; 
+    default:
+      Keyboard.set_key1(key); 
+  }
+}
+
+//Clears keys that are not be pressed.
+void clear_keys(int key_count){
+ switch(key_count){
+   
+  case(1):
+    Keyboard.set_key1(0);
+  case(2):
+    Keyboard.set_key2(0);
+  case(3):
+    Keyboard.set_key3(0);
+  case(4):
+    Keyboard.set_key4(0);
+  case(5):
+    Keyboard.set_key5(0);  
+  case(6):
+    Keyboard.set_key6(0);
+  default:
+    break;
+    
+ } 
+}
+
+//Function to process the buttons from the SNES controller
+void fcnProcessButtons()
+{
+  int key_count = 1;
+  
+ // run through all the buttons
+  for (byte i = 0; i < NUMBUTTONS; i++) {
+    
+    // are any of them pressed?
+    if (! digitalRead(buttons[i])) {
+      //Set current key to the next availible spot
+      set_key(key_count, keys[i]);
+      key_count++;
+    }
+  }
+  //Clears unused keys
+  clear_keys(key_count);
+  //Send whatever is set/cleared
+  Keyboard.send_now();
+}
